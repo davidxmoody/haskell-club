@@ -51,6 +51,7 @@ evalE :: State -> Expression -> Int
 evalE state (Var str) = state str
 evalE state (Val int) = int
 evalE state (Op a Plus b) = (evalE state a) + (evalE state b)
+evalE state (Op a Times b) = (evalE state a) * (evalE state b)
 evalE state (Op a Minus b) = (evalE state a) - (evalE state b)
 evalE state (Op a Divide b) = (evalE state a) `div` (evalE state b)
 evalE state (Op a Gt b) = boolToInt $ (evalE state a) > (evalE state b)
@@ -81,10 +82,18 @@ desugar (Skip) = DSkip
 -- Exercise 4 -----------------------------------------
 
 evalSimple :: State -> DietStatement -> State
-evalSimple = undefined
+evalSimple state (DAssign var ex) = extend state var (evalE state ex)
+evalSimple state (DIf ex st1 st2)
+  | (evalE state ex) == 0 = evalSimple state st2
+  | otherwise             = evalSimple state st1
+evalSimple state (DWhile ex st)
+  | (evalE state ex) == 0 = state
+  | otherwise             = evalSimple (evalSimple state st) (DWhile ex st)
+evalSimple state (DSequence st1 st2) = evalSimple (evalSimple state st1) st2
+evalSimple state (DSkip) = state
 
 run :: State -> Statement -> State
-run = undefined
+run state statement = evalSimple state $ desugar statement
 
 -- Programs -------------------------------------------
 
